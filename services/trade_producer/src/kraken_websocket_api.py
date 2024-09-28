@@ -36,6 +36,7 @@ class KrakenWebsocketAPI:
 
         if 'heartbeat' in message:
             # when I get a heartbeat, I return an empty list
+            print(message)
             return []
 
         # parse the message string as a dictionary
