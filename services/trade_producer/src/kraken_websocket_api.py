@@ -2,7 +2,7 @@ import json
 from typing import List
 from websocket import create_connection
 from loguru import logger
-
+from datetime import datetime, timezone
 from pydantic import BaseModel
 
 class Trade(BaseModel):
@@ -129,7 +129,6 @@ class KrakenWebsocketAPI:
         # into a datetime object assuming UTC timezone
         # and then transform this datetime object into Unix timestamp
         # expressed in milliseconds
-        from datetime import datetime, timezone
 
         timestamp = datetime.fromisoformat(timestamp[:-1]).replace(tzinfo=timezone.utc)
         return int(timestamp.timestamp() * 1000)
