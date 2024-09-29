@@ -1,6 +1,10 @@
 from loguru import logger
 from quixstreams import Application
-from src. kraken_websocket_api import KrakenWebsocketAPI
+from typing import List
+from src. kraken_websocket_api import (
+    KrakenWebsocketAPI,
+    Trade,
+)
 
 
 def produce_trades(
@@ -34,14 +38,14 @@ def produce_trades(
     with app.get_producer() as producer:
         while True:
 
-            trades = kraken_api.get_trades()
+            trades: List[Trade] = kraken_api.get_trades()
 
             for trade in trades:
 
 
                 # Serialize an event using the defined topic
                 # Transform it into a sequence of bytes
-                message = topic.serialize(key=trade["product_id"], value=trade)
+                message = topic.serialize(key=trade.product_id, value=trade.model_dump())
 
                 # Produce a message into the Kafka topic
                 producer.produce(topic=topic.name, value=message.value, key=message.key)
@@ -57,7 +61,7 @@ if __name__ == "__main__":
     produce_trades(
         kafka_broker_address="localhost:19092",
         kafka_topic="trades",
-        product_id="Eth/USD"
+        product_id="ETH/USD"
     )
 
 
