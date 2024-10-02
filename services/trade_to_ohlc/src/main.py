@@ -2,12 +2,13 @@ from quixstreams import Application
 from datetime import datetime, timedelta
 from loguru import logger
 
+
 def init_ohlcv_candle(trade: dict):
     """
     Returns the initial OHLCV candle when the first 'trade' in that window is happens.
     """
     return {
-        'timestamp': trade['timestamp'],
+        #'timestamp': trade['timestamp'],
         'open': trade['price'],
         'high': trade['price'],
         'low': trade['price'],
@@ -30,6 +31,7 @@ def transform_trade_to_ohlcv(
         kafka_input_topic: str,
         kafka_output_topic: str,
         kafka_consumer_group: str,  
+        ohlcv_window_seconds: int,
 ):
     """
     Reads incoming trades from the given 'kafka_input_topic', transforms them into OHLC data 
@@ -56,21 +58,31 @@ def transform_trade_to_ohlcv(
     # Create a Quix Streams DataFrame
     sdf = app.dataframe(input_topic)
 
+    # check if we are actually reading incoming trades
+    sdf.update(logger.debug)  
+
+    # the mean of the transformation 
+    # aggregates trades into 1-minute OHLCV candles
+    
+
     sdf = (
-        sdf.tumbling_window(duration_ms=timedelta(seconds=1))
+        sdf.tumbling_window(duration_ms=timedelta(seconds=ohlcv_window_seconds))
         .reduce(reducer=update_ohlcv_candle, initializer=init_ohlcv_candle)
-        .final()
+        #.final()
+        .current()
     )
 
     # print the output to the console
-    sdf.apply(logger)
+    sdf.update(logger.debug)
 
+    #kick off the application
     app.run(sdf)
 
 if __name__ == "__main__":
     transform_trade_to_ohlcv(
         kafka_broker_address='localhost:19092',
-        kafka_input_topic='trades',
+        kafka_input_topic='trade',
         kafka_output_topic='ohlcv',
-        kafka_consumer_group='consumer_group_trade_to_ohlcv',
+        kafka_consumer_group='consumer_group_trade_to_ohlcv_4',
+        ohlcv_window_seconds=60,
     )
