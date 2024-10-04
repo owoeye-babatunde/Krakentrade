@@ -1,88 +1,121 @@
 from quixstreams import Application
-from datetime import datetime, timedelta
 from loguru import logger
+from datetime import datetime, timedelta
 
-
-def init_ohlcv_candle(trade: dict):
+def init_ohlcv_candle(
+        trade: dict,
+):
     """
-    Returns the initial OHLCV candle when the first 'trade' in that window is happens.
+    Returns the OHLCV candle when the first trade message is received.
+
+    Args:
+        trade (dict): Trade message
+
+    Returns:
+        dict: OHLCV candle
     """
     return {
-        #'timestamp': trade['timestamp'],
         'open': trade['price'],
         'high': trade['price'],
         'low': trade['price'],
         'close': trade['price'],
         'volume': trade['quantity'],
+        
     }
 
 def update_ohlcv_candle(candle: dict, trade: dict):
     """
-    Updates the given 'ohlcv_candle' with the new 'trade'.
+    Updates the OHLCV candle with the new trade message.
+
+    Args:
+        candle (dict): OHLCV candle
+        trade (dict): Trade message
+
+    Returns:
+        dict: Updated OHLCV candle
     """
     candle['high'] = max(candle['high'], trade['price'])
     candle['low'] = min(candle['low'], trade['price'])
     candle['close'] = trade['price']
     candle['volume'] += trade['quantity']
 
+    return candle
+
 
 def transform_trade_to_ohlcv(
         kafka_broker_address: str,
         kafka_input_topic: str,
         kafka_output_topic: str,
-        kafka_consumer_group: str,  
-        ohlcv_window_seconds: int,
+        kafka_consumer_group: str,
+        ohlcv_window_seconds:int
 ):
     """
-    Reads incoming trades from the given 'kafka_input_topic', transforms them into OHLC data 
-    and outputes them to the given 'kafka_output_topic'.
+    Reads incoming trade messages from a Kafka topic, 
+    aggregates them into OHLC bars and writes the bars 
+    to another Kafka topic.
 
     Args:
-        kafka_broker_address (str): The address of the Kafka broker.
-        kafka_input_topic (str): The topic to read trades from.
-        kafka_output_topic (str): The topic to save the OHLC data.
-        kafka_consumer_group (str): The consumer group.
+        kafka_broker_address (str): Kafka broker address
+        kafka_input_topic (str): Kafka input topic
+        kafka_output_topic (str): Kafka output topic
+        kafka_consumer_group (str): Kafka consumer group
 
     Returns:
         None
     """
+
+
+
     app = Application(
         broker_address=kafka_broker_address,
         consumer_group=kafka_consumer_group,
     )
 
-    # Create an input and output topics
     input_topic = app.topic(name=kafka_input_topic, value_deserializer='json')
     output_topic = app.topic(name=kafka_output_topic, value_serializer='json')
 
-    # Create a Quix Streams DataFrame
-    sdf = app.dataframe(input_topic)
+    # create quixstreams dataframe
+    sdf=app.dataframe(input_topic)
 
-    # check if we are actually reading incoming trades
-    sdf.update(logger.debug)  
-
-    # the mean of the transformation 
-    # aggregates trades into 1-minute OHLCV candles
     
-
-    sdf = (
+    sdf=(
         sdf.tumbling_window(duration_ms=timedelta(seconds=ohlcv_window_seconds))
         .reduce(reducer=update_ohlcv_candle, initializer=init_ohlcv_candle)
-        #.final()
-        .current()
+        .final()
+        #.current()
     )
 
-    # print the output to the console
+    # check if we are reading incoming trades
+    
+
+    sdf['open'] = sdf['value']['open']
+    sdf['high'] = sdf['value']['high']
+    sdf['low'] = sdf['value']['low']
+    sdf['close'] = sdf['value']['close']
+    sdf['volume'] = sdf['value']['volume']
+    sdf['timestamp_ms'] = sdf['end']
+
+    
+    # keep only the columns we need
+    sdf = sdf[['timestamp_ms', 'open', 'high', 'low', 'close', 'volume']]
+
+    # log the data
     sdf.update(logger.debug)
 
-    #kick off the application
+    # push the data to the output topic
+    sdf = sdf.to_topic(output_topic)
+
+    
     app.run(sdf)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     transform_trade_to_ohlcv(
         kafka_broker_address='localhost:19092',
         kafka_input_topic='trade',
         kafka_output_topic='ohlcv',
-        kafka_consumer_group='consumer_group_trade_to_ohlcv_4',
+        kafka_consumer_group='consumer_group_trade_to_ohlc',
         ohlcv_window_seconds=60,
     )
+
+
+    

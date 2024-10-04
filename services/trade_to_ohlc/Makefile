@@ -1,5 +1,5 @@
 run-dev:
-	copy dev.env .env
+#	copy dev.env .env
 	poetry run python src/main.py 
 
 # build:
