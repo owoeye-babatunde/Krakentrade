@@ -109,12 +109,15 @@ def transform_trade_to_ohlcv(
     app.run(sdf)
 
 if __name__ == '__main__':
+
+    from src.config import config
+
     transform_trade_to_ohlcv(
-        kafka_broker_address='localhost:19092',
-        kafka_input_topic='trade',
-        kafka_output_topic='ohlcv',
-        kafka_consumer_group='consumer_group_trade_to_ohlc',
-        ohlcv_window_seconds=60,
+        kafka_broker_address=config.kafka_broker_address,
+        kafka_input_topic=config.kafka_input_topic,
+        kafka_output_topic=config.kafka_output_topic,
+        kafka_consumer_group=config.kafka_consumer_group,
+        ohlcv_window_seconds=config.ohlcv_window_seconds,
     )
 
 
