@@ -1,0 +1,26 @@
+name: trade_producer
+language: python
+variables:
+  - name: KAFKA_TOPIC
+    inputType: OutputTopic
+    description: ''
+    defaultValue: trade_live
+    required: true
+  - name: PRODUCT_IDS
+    inputType: FreeText
+    description: List of crypto currencies we want to get trades for
+    defaultValue: '["BTC/EUR","ETH/EUR"]'
+    required: true
+  - name: LIVE_OR_HISTORICAL
+    inputType: FreeText
+    description: Either "live" or "historical"
+    defaultValue: live
+    required: true
+  - name: LAST_N_DAYS
+    inputType: FreeText
+    description: Number of days in the past for which we fetch trade data
+    defaultValue: 30
+    required: false
+dockerfile: Dockerfile
+runEntryPoint: src/main.py
+defaultFile: src/main.py
