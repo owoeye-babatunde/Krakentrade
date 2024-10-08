@@ -60,6 +60,7 @@ if __name__ == "__main__":
 
 
     from src.config import config
+    kraken_api = KrakenWebsocketAPI(product_id=config.product_id)
 
     produce_trades(
         kafka_broker_address=config.kafka_broker_address,
